@@ -1,0 +1,110 @@
+---
+title: "ESM244_lab2"
+author: "Sam Csik"
+date: "1/17/2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+0. Attach packages
+```{r}
+library(tidyverse)
+library(janitor)
+library(MASS)
+library(RColorBrewer)
+library(factoextra)
+library(ggbiplot)
+library(shinythemes)
+```
+
+If you want to override (set) a function manually thorughout an entire workspace, you can assign the function name explicitly:
+
+```{r}
+select <- dplyr::select
+```
+
+Or, include dplyr::select in line.
+
+###1. Ordinal logistic regression for political party affiliation by ethnicity, age, sex
+
+```{r}
+pol_party <- read_csv("pol_party.csv") %>% 
+  clean_names() %>% 
+  select(participant_id:read_carefully)
+
+# a little more wrangling
+pol_df <- pol_party %>% 
+  select(birth_year, gender, ethnicity, political_party) %>% 
+  filter(birth_year > 1900, political_party != "NA", political_party <= 7) %>% 
+  mutate(age = 2016 - birth_year)
+
+# Political party: 1 = very liberal, 7 = very conservative
+
+# When doing OLR we want our dependent variable to be of class ORDERED FACTOR
+
+pol_df$political_party <- factor(pol_df$political_party, ordered = TRUE, levels = c("1", "2", "3", "4", "5", "6", "7"))
+
+# Update our categorical predictor variables to factors too:
+
+pol_df$ethnicity <- factor(pol_df$ethnicity)
+pol_df$gender <- factor(pol_df$gender)
+```
+
+Basic data exploration and visualization:
+
+```{r}
+counts_eth <- pol_df %>% 
+  group_by(ethnicity, political_party) %>% 
+  tally()
+
+counts_g <- pol_df %>% 
+  group_by(gender, political_party) %>% 
+  tally()
+
+ggplot(pol_df, aes(x = political_party)) +
+  geom_histogram(aes(fill = ethnicity), stat = "count") + 
+  scale_fill_brewer(palette = "YlGnBu") + 
+  facet_wrap(~ethnicity, scales = "free")
+```
+
+# THESE DATA ARE PRECARIOUS AND N IS TOO SMALL FOR GROUPS!! but let's see what happens anyway...
+
+```{r}
+# run OLR (will work as long as vars are of the correct class)
+
+# THIS IS NOT PUBLISHABLE DATA B/C IT IS VERY BIASED
+
+pol_model <- polr(political_party ~ age + gender + ethnicity, data = pol_df)
+summary(pol_model)
+
+# some interpretations
+# as age increases, we would expect to see a TINY increase in the probability of someone ranking themselves...
+# female was reference sex: increase in log odds relative to ref level; males are more likely ot rank higher on pol_preference scale relative to femaled
+
+# since log odds are hard to think about, convert to odds by exponentiating
+exp(coef(pol_model))
+
+# odds = 1 means that they haven't changed from previous scenario
+# age deosn't have an effect on pol_party affiliation
+# increae in odds of males vs females of similar age and ethnicity
+
+# Once we've decided on a model, we can always make predictions using it:
+
+predictions <- predict(pol_model, type = "probs") # makes predictions for each person (by age, ethnicity) for where they will fall along the political_party affiliation
+
+df <- data.frame(pol_df, predictions)
+```
+
+####2. Principal components analysis (PCA)
+
+Data from the WorldBank environmental indicators
+
+```{r}
+wb_10 <- read_csv("wb_10.csv")
+```
+
