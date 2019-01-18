@@ -105,6 +105,17 @@ df <- data.frame(pol_df, predictions)
 Data from the WorldBank environmental indicators
 
 ```{r}
-wb_10 <- read_csv("wb_10.csv")
+wb_10 <- read_csv("wb_10.csv") %>% 
+  select(-X1) %>% 
+  column_to_rownames('code')
+
+wb_pcs <- prcomp(wb_10[3:8], scale = TRUE)
+
+summary(wb_pca)
+
+ggbiplot(wb_pca) + 
+  geom_text_repel(label = rownames(wb_10), size = 2, segment.size = 0.2) +
+  theme_bw()
+  
 ```
 
