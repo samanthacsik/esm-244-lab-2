@@ -20,6 +20,7 @@ library(RColorBrewer)
 library(factoextra)
 library(ggbiplot)
 library(shinythemes)
+library(ggrepel)
 ```
 
 If you want to override (set) a function manually thorughout an entire workspace, you can assign the function name explicitly:
@@ -109,13 +110,31 @@ wb_10 <- read_csv("wb_10.csv") %>%
   select(-X1) %>% 
   column_to_rownames('code')
 
-wb_pcs <- prcomp(wb_10[3:8], scale = TRUE)
+wb_pca <- prcomp(wb_10[3:8], scale = TRUE)
 
 summary(wb_pca)
 
 ggbiplot(wb_pca) + 
   geom_text_repel(label = rownames(wb_10), size = 2, segment.size = 0.2) +
   theme_bw()
+
+# factoextra package (built to help visualize outcomes of ordination methods)
+
+# screeplot:
+
+fviz_screeplot(wb_pca)
+
+# see contriburtions of variables to different components:
+
+fviz_contrib(wb_pca, choice = "var", axes = 2, top = 6) # change axes to 1 or 2 to see contributers to each PCA
+
+# Biplot showing points and vectors
+
+fviz_pca_biplot(wb_pca,
+                col.var = "cos2", 
+                label = "var", 
+                repel = TRUE)
   
 ```
+
 
